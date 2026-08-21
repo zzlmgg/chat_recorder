@@ -1,0 +1,12 @@
+{
+  "http_version": "1.1",
+  "status": 200,
+  "reason": "OK",
+  "headers": [
+    ["Content-Type", "text/event-stream; charset=utf-8"],
+    ["Transfer-Encoding", "chunked"],
+    ["Cache-Control", "no-cache"]
+  ],
+  "trailers": [],
+  "entity_file": "response.body"
+}

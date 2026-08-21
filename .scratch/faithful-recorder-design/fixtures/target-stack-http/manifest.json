@@ -1,0 +1,48 @@
+{
+  "fixture_schema": 1,
+  "captured_at": "2026-08-21",
+  "target_stack": {
+    "claude_code_cli_version": "2.1.238",
+    "vscode_version": "1.116.0",
+    "vscode_extension": "anthropic.claude-code@2.1.238",
+    "cc_switch_version": "3.15.0",
+    "cc_switch_provider": "DeepSeek",
+    "cc_switch_takeover_active": false,
+    "upstream_base_url": "https://api.deepseek.com/anthropic",
+    "auth_header": "Authorization: Bearer <redacted>",
+    "model": "deepseek-v4-flash",
+    "default_haiku_model": "deepseek-v4-flash",
+    "default_sonnet_model": "deepseek-v4-flash[1M]",
+    "default_opus_model": "deepseek-v4-pro[1M]",
+    "effort": "max",
+    "max_context_tokens": 1000000
+  },
+  "client_binary_sha256": "0933b286cf94e1b2504b35ac165ab76b8f822735d53371c56393988c23040d58",
+  "diagnostic_recorder_sha256": "972e92cc0be089dc98ffc98b73e1e823e6499491ce93106a1da16232e81718ca",
+  "calls": {
+    "deepseek_inference_total": 3,
+    "captured": 2,
+    "uncaptured_direct": 1,
+    "authorized_maximum": 10
+  },
+  "captures": [
+    {
+      "surface": "cli",
+      "entrypoint": "sdk-cli",
+      "session_id": "a11f5b03-c280-4dc6-8c52-f0967d48948e",
+      "directory": "cli/001-post-v1-messages-beta-true",
+      "capture_json_sha256": "ee983a69bf97abbf602cf0cbdf6dd4e227a479f632eec8a2815e5ad6291129b9",
+      "request_body_sha256": "e52f890dba0f731d3d65badcd3cc0194239be7e0fa2b1dbb4e972843580dfa29",
+      "response_body_sha256": "8126326c9877314c5e69cbc969bd70e4c47309a5fb5135972d9d73c0de2b3676"
+    },
+    {
+      "surface": "vscode-extension",
+      "entrypoint": "claude-vscode",
+      "session_id": "b6b67440-03af-4f1d-abcf-6e779f95de6f",
+      "directory": "vscode-extension/001-post-v1-messages-beta-true",
+      "capture_json_sha256": "4858d7e43e9e826356ee048907577f60f38e47ece986049d2d5844db7be591b8",
+      "request_body_sha256": "869e01feb2ff688e50148834da60dca9a696aecb4d7b984d443276229f16ee8d",
+      "response_body_sha256": "e23761aba5248cedbb1820e1780640de3ed12869fa5ec8b865a565f9435d31ad"
+    }
+  ]
+}

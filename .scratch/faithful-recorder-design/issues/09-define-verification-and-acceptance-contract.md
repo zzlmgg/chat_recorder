@@ -1,0 +1,9 @@
+# Define end-to-end verification and acceptance contract
+
+Type: grilling
+Status: open
+Blocked by: 03, 04, 05, 06, 07, 08
+
+## Question
+
+What automated fixtures and live acceptance scenarios prove that every Model Exchange for the locked Harness Session is recorded in order with byte-identical plaintext HTTP content while Claude Code CLI and VS Code still receive the Model's streamed responses?
