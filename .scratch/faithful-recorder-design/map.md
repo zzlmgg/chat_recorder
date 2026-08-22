@@ -25,10 +25,9 @@ Reach an implementation-ready technical specification for a standalone Linux Rec
 - [Define single-session acquisition and lock lifecycle](issues/04-define-single-session-lock-lifecycle.md) — the first eligible Messages request locks an opaque session identity; the script records that Harness Session until normal manual stop preserves the final admitted exchange and closes the recording.
 - [Design the lossless recording artifact](issues/05-design-lossless-recording-artifact.md) — a session-named directory indexes request-ordered exchange folders, each pairing byte-exact request/response entities with ordered HTTP metadata and the auditable upstream request envelope.
 - [Define Recorder Profile and runtime configuration contract](issues/06-define-recorder-profile-and-runtime-configuration.md) — clone the effective Direct settings into a separately selected loopback profile, run the Recorder as the sole data-plane proxy, and configure only its upstream base, output root, and optional listen socket at launch.
+- [Choose implementation stack and streaming I/O](issues/07-choose-implementation-stack-and-streaming-io.md) — Node.js ≥22, zero dependencies, hand-rolled two-hop proxy on stock http/https with raw-header-preserving observation, tee-on-read streaming writes, HTTP/1.1 keep-alive both hops; small module split with node:test.
 
 ## Not yet specified
-
-- Module boundaries and internal component seams remain fog until the observation seam, artifact layout, and implementation stack are decided.
 
 ## Out of scope
 
