@@ -26,6 +26,7 @@ Reach an implementation-ready technical specification for a standalone Linux Rec
 - [Design the lossless recording artifact](issues/05-design-lossless-recording-artifact.md) — a session-named directory indexes request-ordered exchange folders, each pairing byte-exact request/response entities with ordered HTTP metadata and the auditable upstream request envelope.
 - [Define Recorder Profile and runtime configuration contract](issues/06-define-recorder-profile-and-runtime-configuration.md) — clone the effective Direct settings into a separately selected loopback profile, run the Recorder as the sole data-plane proxy, and configure only its upstream base, output root, and optional listen socket at launch.
 - [Choose implementation stack and streaming I/O](issues/07-choose-implementation-stack-and-streaming-io.md) — Node.js ≥22, zero dependencies, hand-rolled two-hop proxy on stock http/https with raw-header-preserving observation, tee-on-read streaming writes, HTTP/1.1 keep-alive both hops; small module split with node:test.
+- [Set supported-version and client compatibility contract](issues/08-set-version-and-client-compatibility-contract.md) — two-tier claim: a short Verified table measured 2026-08-21 (Claude Code 2.1.238 both entrypoints, VS Code 1.116.0, cc-switch 3.15.0, DeepSeek endpoint), nothing else claimed; the Recorder has no version logic — admission stays header-only (04), client version is passively recoverable from the recorded User-Agent.
 
 ## Not yet specified
 
