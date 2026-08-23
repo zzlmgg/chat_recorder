@@ -12,7 +12,7 @@ import {
   rawFieldPairs,
   reservePort,
   waitForOutput,
-} from "./support/recorder-test-helpers.mjs";
+} from "../test-support/recorder-test-helpers.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 
