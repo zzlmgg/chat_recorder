@@ -5,6 +5,7 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import {
   listen,
@@ -17,10 +18,12 @@ const projectRoot = path.resolve(import.meta.dirname, "..");
 
 test("overlapping Model Exchanges persist in request-header admission order", async (t) => {
   const fixture = await startRecorderFixture(t);
-  const admitted = [];
+  const pendingHarnessExchanges = [];
   for (const sequence of [1, 2, 3]) {
-    admitted.push(fixture.sendExchange(sequence));
-    await fixture.modelReceived[sequence - 1].promise;
+    const pending = fixture.startExchange(sequence);
+    pendingHarnessExchanges.push(pending);
+    pending.request.flushHeaders();
+    await waitForIndexLength(fixture.sessionRoot, sequence);
   }
 
   assert.deepEqual(await readJson(path.join(fixture.sessionRoot, "index.json")), {
@@ -29,17 +32,24 @@ test("overlapping Model Exchanges persist in request-header admission order", as
     exchanges: ["exchange-000001", "exchange-000002", "exchange-000003"],
   });
 
+  for (const sequence of [3, 1, 2]) {
+    pendingHarnessExchanges[sequence - 1].request.end(requestEntity(sequence));
+    await fixture.exchangeGates[sequence - 1].requestComplete.promise;
+  }
+
   const harnessCompletionOrder = [];
   for (const sequence of [2, 3, 1]) {
-    fixture.modelMayRespond[sequence - 1].resolve();
-    const response = await admitted[sequence - 1];
+    fixture.exchangeGates[sequence - 1].mayRespond.resolve();
+    const response = await pendingHarnessExchanges[sequence - 1].response;
     harnessCompletionOrder.push(sequence);
     assert.equal(response.status, 210 + sequence);
     assert.deepEqual(response.entity, responseEntity(sequence));
   }
   assert.deepEqual(harnessCompletionOrder, [2, 3, 1]);
 
-  const laterResponse = await fixture.sendExchange(4);
+  const laterExchange = fixture.startExchange(4);
+  laterExchange.request.end(requestEntity(4));
+  const laterResponse = await laterExchange.response;
   assert.equal(laterResponse.status, 214);
   assert.deepEqual(laterResponse.entity, responseEntity(4));
 
@@ -96,25 +106,29 @@ test("overlapping Model Exchanges persist in request-header admission order", as
 
   assert.deepEqual(
     fixture.modelRequests.map(({ sequence, entity }) => ({ sequence, entity })),
-    [1, 2, 3, 4].map((sequence) => ({ sequence, entity: requestEntity(sequence) })),
+    [3, 1, 2, 4].map((sequence) => ({ sequence, entity: requestEntity(sequence) })),
   );
 });
 
 async function startRecorderFixture(t) {
   const outputRoot = await mkdtemp(path.join(os.tmpdir(), "recorder-admission-order-"));
-  const modelReceived = [0, 1, 2].map(() => Promise.withResolvers());
-  const modelMayRespond = [0, 1, 2].map(() => Promise.withResolvers());
+  const exchangeGates = [0, 1, 2].map(() => ({
+    requestComplete: Promise.withResolvers(),
+    mayRespond: Promise.withResolvers(),
+  }));
   const modelRequests = [];
   const modelResponseCompletionOrder = [];
   const model = http.createServer((request, response) => {
-    const sequence = Number(new URL(request.url, "http://model.invalid").searchParams.get("admission"));
+    const sequence = Number(
+      new URL(request.url, "http://model.invalid").searchParams.get("admission"),
+    );
     const chunks = [];
     request.on("data", (chunk) => chunks.push(chunk));
     request.once("end", async () => {
       modelRequests.push({ sequence, entity: Buffer.concat(chunks) });
       if (sequence <= 3) {
-        modelReceived[sequence - 1].resolve();
-        await modelMayRespond[sequence - 1].promise;
+        exchangeGates[sequence - 1].requestComplete.resolve();
+        await exchangeGates[sequence - 1].mayRespond.promise;
       }
       response.sendDate = false;
       response.writeHead(210 + sequence, `Model Response ${sequence}`, [
@@ -154,14 +168,13 @@ async function startRecorderFixture(t) {
   await waitForOutput(recorder, `Recorder listening on http://127.0.0.1:${recorderPort}`);
 
   return {
-    modelMayRespond,
-    modelReceived,
+    exchangeGates,
     modelRequests,
     modelResponseCompletionOrder,
     outputRoot,
     sessionRoot: path.join(outputRoot, "session-admission-order-session"),
-    sendExchange(sequence) {
-      return sendHarnessRequest(recorderPort, sequence);
+    startExchange(sequence) {
+      return startHarnessExchange(recorderPort, sequence);
     },
     async stopRecorder() {
       recorder.kill("SIGINT");
@@ -171,33 +184,46 @@ async function startRecorderFixture(t) {
   };
 }
 
-function sendHarnessRequest(port, sequence) {
-  return new Promise((resolve, reject) => {
-    const request = http.request({
-      host: "127.0.0.1",
-      port,
-      method: "POST",
-      path: `/v1/messages?admission=${sequence}`,
-      agent: false,
-      headers: [
-        ["Host", `127.0.0.1:${port}`],
-        ["X-Claude-Code-Session-Id", "admission-order-session"],
-        ["Content-Type", "application/octet-stream"],
-        ["Content-Length", String(requestEntity(sequence).length)],
-        ["Connection", "close"],
-      ],
-    });
-    request.once("error", reject);
-    request.once("response", (response) => {
-      const chunks = [];
-      response.on("data", (chunk) => chunks.push(chunk));
-      response.once("error", reject);
-      response.once("end", () => {
-        resolve({ status: response.statusCode, entity: Buffer.concat(chunks) });
-      });
-    });
-    request.end(requestEntity(sequence));
+function startHarnessExchange(port, sequence) {
+  const responseResult = Promise.withResolvers();
+  const request = http.request({
+    host: "127.0.0.1",
+    port,
+    method: "POST",
+    path: `/v1/messages?admission=${sequence}`,
+    agent: false,
+    headers: [
+      ["Host", `127.0.0.1:${port}`],
+      ["X-Claude-Code-Session-Id", "admission-order-session"],
+      ["Content-Type", "application/octet-stream"],
+      ["Content-Length", String(requestEntity(sequence).length)],
+      ["Connection", "close"],
+    ],
   });
+  request.once("error", responseResult.reject);
+  request.once("response", (response) => {
+    const chunks = [];
+    response.on("data", (chunk) => chunks.push(chunk));
+    response.once("error", responseResult.reject);
+    response.once("end", () => {
+      responseResult.resolve({ status: response.statusCode, entity: Buffer.concat(chunks) });
+    });
+  });
+  return { request, response: responseResult.promise };
+}
+
+async function waitForIndexLength(sessionRoot, expectedLength) {
+  const deadline = Date.now() + 2_000;
+  while (Date.now() < deadline) {
+    try {
+      const index = await readJson(path.join(sessionRoot, "index.json"));
+      if (index.exchanges.length === expectedLength) return;
+    } catch (error) {
+      if (error.code !== "ENOENT" && !(error instanceof SyntaxError)) throw error;
+    }
+    await delay(10);
+  }
+  throw new Error(`Recorder did not index ${expectedLength} admitted Model Exchanges`);
 }
 
 function requestEntity(sequence) {

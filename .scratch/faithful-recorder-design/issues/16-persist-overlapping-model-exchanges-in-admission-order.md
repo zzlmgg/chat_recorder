@@ -14,6 +14,6 @@
 
 ## Answer
 
-The assembled Recorder test admits three same-session Model Exchanges while all Model responses remain held open, proving that request-header admission has already assigned `exchange-000001` through `exchange-000003` in the schema-v1 index. The controlled Model then completes responses in the deliberate order 2, 3, 1, after which a fourth request proves the Harness Session lock and numbering continue without rotation.
+The assembled Recorder test admits three same-session Model Exchanges while their request entities and all Model responses remain held open, proving that request-header admission has already assigned `exchange-000001` through `exchange-000003` in the schema-v1 index. It then completes the request entities in the order 3, 1, 2 and the controlled Model responses in the order 2, 3, 1, after which a fourth request proves the Harness Session lock and numbering continue without rotation.
 
 The finalized artifact retains admission order and contains exactly one complete request/upstream-request/response pairing with its two entity files in each exchange directory. Unique request targets, response statuses and reasons, and entity bytes make any cross-exchange pairing error observable.
