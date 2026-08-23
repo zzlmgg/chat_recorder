@@ -4,7 +4,7 @@
 
 **Blocked by:** 12 — Stream opaque Model Exchange entities byte-for-byte.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Recorded response metadata preserves the Model's HTTP version, numeric status, reason phrase, and ordered, duplicate-preserving header and trailer pairs with original field-name casing.
 - [x] Unknown end-to-end response fields and trailers reach the Harness without a closed allowlist or semantic transformation.
