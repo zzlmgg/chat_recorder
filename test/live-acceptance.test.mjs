@@ -65,6 +65,7 @@ test("live acceptance drives both verified Harness entrypoints through fresh Rec
     cwd: projectRoot,
     env: {
       ...withoutLiveConfiguration(process.env),
+      ANTHROPIC_BASE_URL: `http://127.0.0.1:${recorderPort}/`,
       FAKE_HARNESS_LOG: harnessLog,
       RECORDER_LIVE_ACCEPTANCE: "1",
       RECORDER_LIVE_UPSTREAM_BASE_URL: `http://127.0.0.1:${model.address().port}/anthropic`,
@@ -92,6 +93,10 @@ test("live acceptance drives both verified Harness entrypoints through fresh Rec
     .split("\n")
     .map((line) => JSON.parse(line));
   assert.equal(invocations.length, 2);
+  assert.deepEqual(
+    invocations.map(({ anthropicBaseUrl }) => anthropicBaseUrl),
+    [`http://127.0.0.1:${recorderPort}/`, `http://127.0.0.1:${recorderPort}/`],
+  );
   assert.deepEqual(invocations.map(({ entrypoint }) => entrypoint), ["sdk-cli", "claude-vscode"]);
   assert.equal(invocations[0].mcpConnectionNonblocking, undefined);
   assert.equal(invocations[0].tasksEnabled, undefined);

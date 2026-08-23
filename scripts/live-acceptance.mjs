@@ -145,10 +145,7 @@ async function startRecorderProcess(configuration, outputRoot) {
 }
 
 async function runHarness({ configuration, output, scenario, sessionId }) {
-  const environment = harnessEnvironment(configuration.environment, {
-    ...scenario.launcherEnvironment,
-    ANTHROPIC_BASE_URL: configuration.listenBaseUrl,
-  });
+  const environment = harnessEnvironment(configuration.environment, scenario.launcherEnvironment);
   const child = spawn(scenario.executable, [
     "-p", configuration.prompt,
     "--session-id", sessionId,
@@ -261,6 +258,12 @@ async function validateSessionArtifact(outputRoot, sessionId) {
   requireCondition(index.artifact_version === 1, "index.json does not use artifact_version 1");
   requireCondition(index.session_id === sessionId, "index.json does not retain the fresh Harness Session ID");
   requireCondition(Array.isArray(index.exchanges) && index.exchanges.length > 0, "index.json contains no Model Exchanges");
+  const sessionEntries = (await readdir(sessionRoot)).sort();
+  const indexedEntries = ["index.json", ...index.exchanges].sort();
+  requireCondition(
+    JSON.stringify(sessionEntries) === JSON.stringify(indexedEntries),
+    "session contents do not match the exchanges listed in index.json",
+  );
 
   const userAgents = new Set();
   for (let indexPosition = 0; indexPosition < index.exchanges.length; indexPosition += 1) {
@@ -281,11 +284,11 @@ async function validateSessionArtifact(outputRoot, sessionId) {
       stat(path.join(exchangeRoot, "request.body")),
       stat(path.join(exchangeRoot, "response.body")),
     ]);
-    validateMetadata(request, "request.body", `${exchangeName}/request.json`);
-    validateMetadata(upstreamRequest, "request.body", `${exchangeName}/upstream-request.json`);
-    validateMetadata(response, "response.body", `${exchangeName}/response.json`);
-    requireCondition(requestBody.size > 0, `${exchangeName}/request.body is empty`);
-    requireCondition(responseBody.size > 0, `${exchangeName}/response.body is empty`);
+    validateRequestMetadata(request, `${exchangeName}/request.json`);
+    validateRequestMetadata(upstreamRequest, `${exchangeName}/upstream-request.json`);
+    validateResponseMetadata(response, `${exchangeName}/response.json`);
+    requireCondition(requestBody.isFile() && requestBody.size > 0, `${exchangeName}/request.body is not a non-empty file`);
+    requireCondition(responseBody.isFile() && responseBody.size > 0, `${exchangeName}/response.body is not a non-empty file`);
     requireCondition(
       Number.isInteger(response.status) && response.status >= 200 && response.status < 300,
       `${exchangeName} did not record a successful Model response`,
@@ -299,6 +302,19 @@ async function validateSessionArtifact(outputRoot, sessionId) {
   }
 
   return { userAgents: [...userAgents] };
+}
+
+function validateRequestMetadata(metadata, label) {
+  validateMetadata(metadata, "request.body", label);
+  requireCondition(metadata.http_version === "1.1", `${label} does not record HTTP/1.1`);
+  requireCondition(typeof metadata.method === "string" && metadata.method.length > 0, `${label} has no method`);
+  requireCondition(typeof metadata.target === "string" && metadata.target.length > 0, `${label} has no target`);
+}
+
+function validateResponseMetadata(metadata, label) {
+  validateMetadata(metadata, "response.body", label);
+  requireCondition(metadata.http_version === "1.1", `${label} does not record HTTP/1.1`);
+  requireCondition(typeof metadata.reason === "string", `${label} has no reason phrase`);
 }
 
 function validateMetadata(metadata, entityFile, label) {

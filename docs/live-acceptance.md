@@ -61,8 +61,6 @@ Optional inputs are:
 | `RECORDER_LIVE_LISTEN` | `127.0.0.1:4318` | Recorder listen socket; the selected Recorder Profile must use the matching base. |
 | `RECORDER_LIVE_PROMPT` | `Reply with exactly OK.` | Non-interactive prompt sent to each fresh Harness Session. |
 
-The driver also supplies the matching `ANTHROPIC_BASE_URL` to each Harness subprocess. This keeps the process attached to its fresh Recorder without reading or mutating the selected profile.
-
 `npm run acceptance` first runs the complete offline `node:test` suite, including both captured-fixture replays. Only after it passes does the driver run, in order:
 
 1. a fresh Recorder and UUID-backed Harness Session using the installed CLI with the `sdk-cli` entrypoint and `-p`;

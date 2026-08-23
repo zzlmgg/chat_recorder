@@ -20,6 +20,7 @@ const body = Buffer.from(JSON.stringify({
 }));
 
 await appendFile(process.env.FAKE_HARNESS_LOG, `${JSON.stringify({
+  anthropicBaseUrl: process.env.ANTHROPIC_BASE_URL,
   arguments: arguments_,
   entrypoint,
   mcpConnectionNonblocking: process.env.MCP_CONNECTION_NONBLOCKING,
