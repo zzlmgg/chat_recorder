@@ -153,6 +153,16 @@ test("non-HTTP/1.1 Harness requests receive 505 before Harness Session acquisiti
     "",
   ].join("\r\n"));
   assert.equal(invalidVersionStatus, 505);
+
+  const malformedVersionStatus = await sendRawHarnessRequest(fixture.recorderPort, [
+    "POST /v1/messages HTTP/1.X",
+    `Host: 127.0.0.1:${fixture.recorderPort}`,
+    "X-Claude-Code-Session-Id: must-not-acquire-malformed",
+    "Content-Length: 0",
+    "",
+    "",
+  ].join("\r\n"));
+  assert.equal(malformedVersionStatus, 400);
   assert.equal(modelRequestCount, 0);
   assert.deepEqual(await readdir(fixture.outputRoot), []);
 

@@ -58,10 +58,7 @@ export async function startRecorder({ upstreamBaseUrl, outputRoot, listen }) {
   server.on("clientError", (error, socket) => {
     if (error.code === "ECONNRESET" || !socket.writable) return;
 
-    const unsupportedVersion =
-      error.code === "HPE_PAUSED_H2_UPGRADE"
-      || error.code === "HPE_INVALID_VERSION";
-    const status = unsupportedVersion
+    const status = isUnsupportedHttpVersion(error)
       ? "505 HTTP Version Not Supported"
       : "400 Bad Request";
     socket.end(`HTTP/1.1 ${status}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
@@ -84,6 +81,15 @@ export async function startRecorder({ upstreamBaseUrl, outputRoot, listen }) {
       upstreamAgent.destroy();
     },
   };
+}
+
+function isUnsupportedHttpVersion(error) {
+  if (error.code === "HPE_PAUSED_H2_UPGRADE") return true;
+  if (error.code !== "HPE_INVALID_VERSION") return false;
+
+  const startLine = error.rawPacket?.toString("latin1").split("\r\n", 1)[0];
+  const versionToken = startLine?.split(" ").at(-1);
+  return /^HTTP\/\d+\.\d+$/.test(versionToken ?? "");
 }
 
 async function handleRequest({
