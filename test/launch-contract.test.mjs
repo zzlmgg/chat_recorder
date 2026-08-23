@@ -77,4 +77,6 @@ test("the package declares the zero-dependency Node.js ESM runtime", async () =>
   assert.equal(packageJson.devDependencies, undefined);
   assert.equal(packageJson.bin.recorder, "./src/index.mjs");
   assert.equal(packageJson.scripts.test, "node --test");
+  assert.equal(packageJson.scripts["acceptance:live"], "node scripts/live-acceptance.mjs");
+  assert.equal(packageJson.scripts.acceptance, "node scripts/acceptance.mjs");
 });

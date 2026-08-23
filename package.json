@@ -10,6 +10,8 @@
     "recorder": "./src/index.mjs"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "acceptance:live": "node scripts/live-acceptance.mjs",
+    "acceptance": "node scripts/acceptance.mjs"
   }
 }
