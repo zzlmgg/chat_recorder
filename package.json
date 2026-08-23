@@ -10,6 +10,7 @@
     "recorder": "./src/index.mjs"
   },
   "scripts": {
+    "record": "bash scripts/start-recording.sh",
     "test": "node --test",
     "acceptance:live": "node scripts/live-acceptance.mjs",
     "acceptance": "node scripts/acceptance.mjs"
