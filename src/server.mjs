@@ -18,6 +18,16 @@ export async function startRecorder({ upstreamBaseUrl, outputRoot, listen }) {
       response.end();
       return;
     }
+    if (state === "draining") {
+      request.resume();
+      response.sendDate = false;
+      response.writeHead(503, "Service Unavailable", [
+        "Connection", "close",
+        "Content-Length", "0",
+      ]);
+      response.end();
+      return;
+    }
 
     const candidateSessionId = eligibleSessionId(request);
     if (state === "accepting" && lockedSessionId === undefined && candidateSessionId !== undefined) {
