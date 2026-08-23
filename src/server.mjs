@@ -1,7 +1,7 @@
 import http from "node:http";
 import https from "node:https";
 import { ArtifactSession } from "./artifact.mjs";
-import { forwardModelExchange } from "./exchange.mjs";
+import { forwardModelExchange, rawFieldPairs } from "./exchange.mjs";
 
 export async function startRecorder({ upstreamBaseUrl, outputRoot, listen }) {
   const upstreamAgent = upstreamBaseUrl.protocol === "http:"
@@ -76,7 +76,7 @@ async function handleRequest({
     http_version: request.httpVersion,
     method: request.method,
     target: request.url,
-    headers: pairs(request.rawHeaders),
+    headers: rawFieldPairs(request.rawHeaders),
     trailers: [],
     entity_file: "request.body",
   };
@@ -107,12 +107,4 @@ function eligibleSessionId(request) {
 
   const sessionId = values[0].trim();
   return sessionId || undefined;
-}
-
-function pairs(rawFields) {
-  const result = [];
-  for (let index = 0; index < rawFields.length; index += 2) {
-    result.push([rawFields[index], rawFields[index + 1]]);
-  }
-  return result;
 }

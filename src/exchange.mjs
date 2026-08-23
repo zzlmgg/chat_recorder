@@ -22,7 +22,7 @@ export function forwardModelExchange({
   requestMetadata,
 }) {
   const target = joinTarget(upstreamBaseUrl.pathname, harnessRequest.url);
-  const upstreamHeaders = buildUpstreamHeaders(pairs(harnessRequest.rawHeaders), upstreamBaseUrl.host);
+  const upstreamHeaders = buildUpstreamHeaders(rawFieldPairs(harnessRequest.rawHeaders), upstreamBaseUrl.host);
   const transport = upstreamBaseUrl.protocol === "http:" ? http : https;
 
   return new Promise((resolve, reject) => {
@@ -55,7 +55,7 @@ export function forwardModelExchange({
 
     upstreamRequest.once("error", reject);
     upstreamRequest.once("response", (modelResponse) => {
-      const responseHeaders = pairs(modelResponse.rawHeaders);
+      const responseHeaders = rawFieldPairs(modelResponse.rawHeaders);
       const relayedHeaders = withoutHopByHopFields(responseHeaders);
       harnessResponse.sendDate = false;
       harnessResponse.writeHead(
@@ -93,7 +93,7 @@ function relayEntity(source, destination, fileSink) {
     destination.once("error", reject);
     fileSink?.once("error", reject);
     source.once("end", () => {
-      const trailers = pairs(source.rawTrailers);
+      const trailers = rawFieldPairs(source.rawTrailers);
       if (trailers.length > 0) destination.addTrailers(headerObject(trailers));
       destination.end();
       fileFinished.then(() => resolve(trailers), reject);
@@ -107,13 +107,7 @@ function joinTarget(basePath, harnessTarget) {
 }
 
 function buildUpstreamHeaders(sourceHeaders, upstreamHost) {
-  const connectionFields = new Set();
-  for (const [name, value] of sourceHeaders) {
-    if (name.toLowerCase() !== "connection") continue;
-    for (const token of value.split(",")) connectionFields.add(token.trim().toLowerCase());
-  }
-
-  const excluded = new Set([...standardHopByHopFields, ...connectionFields]);
+  const excluded = new Set([...standardHopByHopFields, ...connectionNominatedFields(sourceHeaders)]);
   const result = [];
   let replacedHost = false;
   for (const [name, value] of sourceHeaders) {
@@ -131,13 +125,17 @@ function buildUpstreamHeaders(sourceHeaders, upstreamHost) {
 }
 
 function withoutHopByHopFields(sourceHeaders) {
-  const connectionFields = new Set();
+  const excluded = new Set([...standardHopByHopFields, ...connectionNominatedFields(sourceHeaders)]);
+  return sourceHeaders.filter(([name]) => !excluded.has(name.toLowerCase()));
+}
+
+function connectionNominatedFields(sourceHeaders) {
+  const fields = new Set();
   for (const [name, value] of sourceHeaders) {
     if (name.toLowerCase() !== "connection") continue;
-    for (const token of value.split(",")) connectionFields.add(token.trim().toLowerCase());
+    for (const token of value.split(",")) fields.add(token.trim().toLowerCase());
   }
-  const excluded = new Set([...standardHopByHopFields, ...connectionFields]);
-  return sourceHeaders.filter(([name]) => !excluded.has(name.toLowerCase()));
+  return fields;
 }
 
 function headerObject(headerPairs) {
@@ -155,7 +153,7 @@ function flatten(headerPairs) {
   return headerPairs.flatMap(([name, value]) => [name, value]);
 }
 
-function pairs(rawFields = []) {
+export function rawFieldPairs(rawFields = []) {
   const result = [];
   for (let index = 0; index < rawFields.length; index += 2) {
     result.push([rawFields[index], rawFields[index + 1]]);
