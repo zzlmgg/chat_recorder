@@ -4,7 +4,7 @@
 
 **Blocked by:** 12 — Stream opaque Model Exchange entities byte-for-byte.
 
-**Status:** resolved
+**Status:** ready-for-agent
 
 - [x] Recorded Harness request metadata preserves the source HTTP version, method, original target, and ordered, duplicate-preserving header and trailer pairs with original field-name casing.
 - [x] The actual upstream target joins the configured base path with the Harness path while preserving the Harness query, without changing the source target stored in the artifact.
