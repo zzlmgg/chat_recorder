@@ -58,7 +58,10 @@ export async function startRecorder({ upstreamBaseUrl, outputRoot, listen }) {
   server.on("clientError", (error, socket) => {
     if (error.code === "ECONNRESET" || !socket.writable) return;
 
-    const status = error.code === "HPE_PAUSED_H2_UPGRADE"
+    const unsupportedVersion =
+      error.code === "HPE_PAUSED_H2_UPGRADE"
+      || error.code === "HPE_INVALID_VERSION";
+    const status = unsupportedVersion
       ? "505 HTTP Version Not Supported"
       : "400 Bad Request";
     socket.end(`HTTP/1.1 ${status}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);

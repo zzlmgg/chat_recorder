@@ -4,7 +4,7 @@
 
 **Blocked by:** 14 — Preserve and relay the Model response envelope; 16 — Persist overlapping Model Exchanges in admission order.
 
-**Status:** resolved
+**Status:** ready-for-agent
 
 - [x] Multiple sequential Model Exchanges can reuse one Harness-side HTTP/1.1 connection.
 - [x] A bounded shared upstream Agent demonstrably reuses a Model-side HTTP/1.1 connection for sequential exchanges.
@@ -17,6 +17,6 @@
 
 The Recorder's loopback server keeps HTTP/1.1 connections reusable and disables request, header, and keep-alive idle cutoffs. Sequential upstream requests share a protocol-specific `http.Agent` or `https.Agent` with keep-alive enabled and a 16-socket bound; the stock HTTP(S) transports remain HTTP/1.1-only, and HTTPS uses the platform trust defaults without TLS overrides.
 
-The server rejects parsed HTTP/1.0 requests with `505` before admission. It also handles Node's parser-level cleartext HTTP/2 preface signal explicitly so that this non-HTTP/1.1 input receives `505` instead of Node's default `400`, while retaining `400` for ordinary malformed HTTP.
+The server rejects parsed HTTP/1.0 requests with `505` before admission. It also handles Node's parser-level cleartext HTTP/2 preface and invalid-version signals explicitly so that syntactically identifiable non-HTTP/1.1 inputs receive `505` instead of Node's default `400`, while retaining `400` for ordinary malformed HTTP.
 
-An assembled-process test sends three sequential Model Exchanges through one Harness connection and observes one reused Model-side connection with HTTP/1.1 on every response and upstream request. Additional synthetic cases hold an SSE response quiet behind an explicit gate before completing it and prove that HTTP/1.0 and cleartext HTTP/2 inputs neither reach the Model nor create a Harness Session artifact. The tests compare complete entities rather than runtime chunk boundaries and require no external service.
+An assembled-process test sends three sequential Model Exchanges through one Harness connection and observes one reused Model-side connection with HTTP/1.1 on every response and upstream request. Additional synthetic cases hold an SSE response quiet behind an explicit gate before completing it and prove that HTTP/1.0, cleartext HTTP/2, and parser-rejected version inputs neither reach the Model nor create a Harness Session artifact. The tests compare complete entities rather than runtime chunk boundaries and require no external service.

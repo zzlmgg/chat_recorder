@@ -143,6 +143,16 @@ test("non-HTTP/1.1 Harness requests receive 505 before Harness Session acquisiti
     "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n",
   );
   assert.equal(http2Status, 505);
+
+  const invalidVersionStatus = await sendRawHarnessRequest(fixture.recorderPort, [
+    "POST /v1/messages HTTP/1.2",
+    `Host: 127.0.0.1:${fixture.recorderPort}`,
+    "X-Claude-Code-Session-Id: must-not-acquire-http12",
+    "Content-Length: 0",
+    "",
+    "",
+  ].join("\r\n"));
+  assert.equal(invalidVersionStatus, 505);
   assert.equal(modelRequestCount, 0);
   assert.deepEqual(await readdir(fixture.outputRoot), []);
 
