@@ -105,6 +105,6 @@ function eligibleSessionId(request) {
   }
   if (values.length !== 1) return undefined;
 
-  const sessionId = values[0].trim();
+  const sessionId = values[0].replace(/^[ \t]+|[ \t]+$/g, "");
   return sessionId || undefined;
 }
