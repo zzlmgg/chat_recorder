@@ -67,7 +67,8 @@ export function forwardModelExchange({
     upstreamRequest.once("error", reject);
     upstreamRequest.once("response", (modelResponse) => {
       const responseHeaders = rawFieldPairs(modelResponse.rawHeaders);
-      const relayedHeaders = withoutHopByHopFields(responseHeaders);
+      const excludedResponseFields = hopByHopFieldNames(responseHeaders);
+      const relayedHeaders = withoutFields(responseHeaders, excludedResponseFields);
       harnessResponse.sendDate = false;
       harnessResponse.writeHead(
         modelResponse.statusCode,
@@ -76,7 +77,12 @@ export function forwardModelExchange({
       );
 
       const responseBodySink = artifact?.createResponseBodySink();
-      const responseEntity = relayEntity(modelResponse, harnessResponse, responseBodySink);
+      const responseEntity = relayEntity(
+        modelResponse,
+        harnessResponse,
+        responseBodySink,
+        (trailers) => withoutFields(trailers, excludedResponseFields),
+      );
       const finalizedResponse = responseEntity.then(async ({ sourceTrailers }) => {
         if (!artifact) return;
         await artifact.writeResponse({
@@ -136,10 +142,6 @@ function buildUpstreamHeaders(sourceHeaders, upstreamHost, excludedFields) {
   result.push(["Connection", "keep-alive"]);
   if (!hasContentLength) result.push(["Transfer-Encoding", "chunked"]);
   return result;
-}
-
-function withoutHopByHopFields(sourceHeaders) {
-  return withoutFields(sourceHeaders, hopByHopFieldNames(sourceHeaders));
 }
 
 function hopByHopFieldNames(sourceHeaders) {
