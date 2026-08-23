@@ -10,7 +10,7 @@ export async function startRecorder({ upstreamBaseUrl, outputRoot, listen }) {
   const activeExchanges = new Set();
   let state = "accepting";
   let lockedSessionId;
-  let artifactSessionPromise;
+  let artifactSession;
 
   const server = http.createServer((request, response) => {
     if (request.httpVersion !== "1.1") {
@@ -22,20 +22,31 @@ export async function startRecorder({ upstreamBaseUrl, outputRoot, listen }) {
     const candidateSessionId = eligibleSessionId(request);
     if (state === "accepting" && lockedSessionId === undefined && candidateSessionId !== undefined) {
       lockedSessionId = candidateSessionId;
-      artifactSessionPromise = ArtifactSession.create(outputRoot, candidateSessionId);
+      artifactSession = ArtifactSession.create(outputRoot, candidateSessionId);
     }
     const admitted =
       state === "accepting"
       && candidateSessionId !== undefined
       && candidateSessionId === lockedSessionId;
+    const requestMetadata = {
+      http_version: request.httpVersion,
+      method: request.method,
+      target: request.url,
+      headers: rawFieldPairs(request.rawHeaders),
+      trailers: [],
+      entity_file: "request.body",
+    };
+    const artifactPromise = admitted
+      ? artifactSession.admit(requestMetadata)
+      : undefined;
 
     const completion = handleRequest({
       request,
       response,
-      admitted,
-      artifactSessionPromise,
+      artifactPromise,
       upstreamBaseUrl,
       upstreamAgent,
+      requestMetadata,
     });
     activeExchanges.add(completion);
     completion.finally(() => activeExchanges.delete(completion));
@@ -67,21 +78,13 @@ export async function startRecorder({ upstreamBaseUrl, outputRoot, listen }) {
 async function handleRequest({
   request,
   response,
-  admitted,
-  artifactSessionPromise,
+  artifactPromise,
   upstreamBaseUrl,
   upstreamAgent,
+  requestMetadata,
 }) {
-  const requestMetadata = {
-    http_version: request.httpVersion,
-    method: request.method,
-    target: request.url,
-    headers: rawFieldPairs(request.rawHeaders),
-    trailers: [],
-    entity_file: "request.body",
-  };
-  const artifact = admitted
-    ? await (await artifactSessionPromise).admit(requestMetadata)
+  const artifact = artifactPromise
+    ? await artifactPromise
     : undefined;
 
   await forwardModelExchange({

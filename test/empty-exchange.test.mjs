@@ -1,12 +1,18 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { readFile, stat } from "node:fs/promises";
+import { mkdtemp, stat } from "node:fs/promises";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { mkdtemp } from "node:fs/promises";
+import {
+  listen,
+  rawFieldPairs,
+  readJson,
+  reservePort,
+  waitForOutput,
+} from "./support/recorder-test-helpers.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 
@@ -17,7 +23,7 @@ test("one empty Model Exchange passes through the assembled Recorder and is reco
     modelRequests.push({
       method: request.method,
       target: request.url,
-      headers: pairs(request.rawHeaders),
+      headers: rawFieldPairs(request.rawHeaders),
     });
 
     response.sendDate = false;
@@ -132,58 +138,6 @@ test("one empty Model Exchange passes through the assembled Recorder and is reco
   assert.equal((await stat(path.join(exchangeRoot, "response.body"))).size, 0);
 });
 
-function pairs(rawFields) {
-  const result = [];
-  for (let index = 0; index < rawFields.length; index += 2) {
-    result.push([rawFields[index], rawFields[index + 1]]);
-  }
-  return result;
-}
-
-async function listen(server) {
-  server.listen(0, "127.0.0.1");
-  await once(server, "listening");
-}
-
-async function reservePort() {
-  const server = http.createServer();
-  await listen(server);
-  const { port } = server.address();
-  await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  return port;
-}
-
-function waitForOutput(child, expected) {
-  return new Promise((resolve, reject) => {
-    let stdout = "";
-    let stderr = "";
-
-    const onStdout = (chunk) => {
-      stdout += chunk;
-      if (stdout.includes(expected)) {
-        cleanup();
-        resolve();
-      }
-    };
-    const onStderr = (chunk) => {
-      stderr += chunk;
-    };
-    const onExit = (code, signal) => {
-      cleanup();
-      reject(new Error(`Recorder exited before listening (${code ?? signal}): ${stderr}`));
-    };
-    const cleanup = () => {
-      child.stdout.off("data", onStdout);
-      child.stderr.off("data", onStderr);
-      child.off("exit", onExit);
-    };
-
-    child.stdout.on("data", onStdout);
-    child.stderr.on("data", onStderr);
-    child.once("exit", onExit);
-  });
-}
-
 function sendEmptyExchange(port) {
   return new Promise((resolve, reject) => {
     const request = http.request({
@@ -215,8 +169,4 @@ function sendEmptyExchange(port) {
     });
     request.end();
   });
-}
-
-async function readJson(file) {
-  return JSON.parse(await readFile(file, "utf8"));
 }

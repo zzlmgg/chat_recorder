@@ -6,6 +6,13 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import {
+  listen,
+  rawFieldPairs,
+  readJson,
+  reservePort,
+  waitForOutput,
+} from "./support/recorder-test-helpers.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 
@@ -135,60 +142,4 @@ function sendHarnessRequest(port) {
     });
     request.end();
   });
-}
-
-function rawFieldPairs(rawFields) {
-  const result = [];
-  for (let index = 0; index < rawFields.length; index += 2) {
-    result.push([rawFields[index], rawFields[index + 1]]);
-  }
-  return result;
-}
-
-async function listen(server) {
-  server.listen(0, "127.0.0.1");
-  await once(server, "listening");
-}
-
-async function reservePort() {
-  const server = http.createServer();
-  await listen(server);
-  const { port } = server.address();
-  await new Promise((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
-  });
-  return port;
-}
-
-function waitForOutput(child, expected) {
-  return new Promise((resolve, reject) => {
-    let stdout = "";
-    let stderr = "";
-    const onStdout = (chunk) => {
-      stdout += chunk;
-      if (stdout.includes(expected)) {
-        cleanup();
-        resolve();
-      }
-    };
-    const onStderr = (chunk) => {
-      stderr += chunk;
-    };
-    const onExit = (code, signal) => {
-      cleanup();
-      reject(new Error(`Recorder exited before listening (${code ?? signal}): ${stderr}`));
-    };
-    const cleanup = () => {
-      child.stdout.off("data", onStdout);
-      child.stderr.off("data", onStderr);
-      child.off("exit", onExit);
-    };
-    child.stdout.on("data", onStdout);
-    child.stderr.on("data", onStderr);
-    child.once("exit", onExit);
-  });
-}
-
-async function readJson(file) {
-  return JSON.parse(await readFile(file, "utf8"));
 }

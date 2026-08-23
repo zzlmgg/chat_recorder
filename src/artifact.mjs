@@ -3,32 +3,33 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export class ArtifactSession {
-  static async create(outputRoot, sessionId) {
+  static create(outputRoot, sessionId) {
     const sessionRoot = path.join(outputRoot, encodeSessionComponent(sessionId));
-    await mkdir(sessionRoot, { recursive: true });
-
-    const session = new ArtifactSession(sessionRoot, sessionId);
-    await session.writeIndex();
-    return session;
+    return new ArtifactSession(sessionRoot, sessionId);
   }
 
   constructor(sessionRoot, sessionId) {
     this.sessionRoot = sessionRoot;
     this.sessionId = sessionId;
     this.exchanges = [];
+    this.admissionQueue = mkdir(sessionRoot, { recursive: true });
   }
 
-  async admit(requestMetadata) {
+  admit(requestMetadata) {
     const name = `exchange-${String(this.exchanges.length + 1).padStart(6, "0")}`;
     const exchangeRoot = path.join(this.sessionRoot, name);
     this.exchanges.push(name);
-    await mkdir(exchangeRoot);
-    await Promise.all([
-      this.writeIndex(),
-      writeJson(path.join(exchangeRoot, "request.json"), requestMetadata),
-    ]);
 
-    return new ExchangeArtifact(exchangeRoot);
+    const ready = this.admissionQueue.then(async () => {
+      await mkdir(exchangeRoot);
+      await Promise.all([
+        this.writeIndex(),
+        writeJson(path.join(exchangeRoot, "request.json"), requestMetadata),
+      ]);
+      return new ExchangeArtifact(exchangeRoot);
+    });
+    this.admissionQueue = ready.then(() => undefined);
+    return ready;
   }
 
   writeIndex() {

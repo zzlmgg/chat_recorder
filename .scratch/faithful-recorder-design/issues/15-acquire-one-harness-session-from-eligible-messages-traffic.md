@@ -4,7 +4,7 @@
 
 **Blocked by:** 13 — Preserve and audit the Harness request envelope.
 
-**Status:** resolved
+**Status:** ready-for-agent
 
 - [x] Lock acquisition occurs synchronously at completed request headers for the first `POST` whose path is exactly `/v1/messages` and whose raw fields contain exactly one non-empty case-insensitive `x-claude-code-session-id` field.
 - [x] The request query is preserved but ignored for eligibility, and the acquiring Model Exchange is admitted before its entity or response completes.
