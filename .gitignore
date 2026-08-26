@@ -1,1 +1,3 @@
 .recordings/
+bridge/dist/
+bridge/node_modules/
